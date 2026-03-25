@@ -1,6 +1,6 @@
 import { Editor, MarkdownView, Notice, Plugin } from "obsidian";
 import { AutoLinkSettings, AutoLinkSettingTab, DEFAULT_SETTINGS } from "./settings";
-import { getCandidateNotes, insertLinks } from "./linker";
+import { getCandidateNotes, insertLinks, InsertLinksResult } from "./linker";
 
 export default class AutoLinkPlugin extends Plugin {
 	settings: AutoLinkSettings = DEFAULT_SETTINGS;
@@ -33,15 +33,20 @@ export default class AutoLinkPlugin extends Plugin {
 		}
 
 		const content = editor.getValue();
-		const updated = insertLinks(content, candidates, this.settings);
+		const { content: updated, linkedTerms } = insertLinks(content, candidates, this.settings);
 
-		if (updated === content) {
+		if (linkedTerms.length === 0) {
 			new Notice("No new links found to insert.");
 			return;
 		}
 
 		editor.setValue(updated);
-		new Notice("AutoLink: Links inserted successfully.");
+
+		const summary = [`AutoLink: ${linkedTerms.length} link${linkedTerms.length === 1 ? "" : "s"} inserted`, ""];
+		for (const term of linkedTerms) {
+			summary.push(`• ${term}`);
+		}
+		new Notice(summary.join("\n"), 8000);
 	}
 
 	async loadSettings() {

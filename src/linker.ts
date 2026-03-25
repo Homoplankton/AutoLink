@@ -115,9 +115,15 @@ export function getCandidateNotes(app: App, activeFile: TFile, settings: AutoLin
 	return candidates;
 }
 
-export function insertLinks(content: string, candidates: NoteCandidate[], settings: AutoLinkSettings): string {
+export interface InsertLinksResult {
+	content: string;
+	linkedTerms: string[];
+}
+
+export function insertLinks(content: string, candidates: NoteCandidate[], settings: AutoLinkSettings): InsertLinksResult {
 	let result = content;
 	const linkedRegions: Array<{ start: number; end: number }> = [];
+	const linkedTerms: string[] = [];
 
 	for (const candidate of candidates) {
 		const allForms = [candidate.title, ...candidate.pluralForms];
@@ -162,10 +168,12 @@ export function insertLinks(content: string, candidates: NoteCandidate[], settin
 				end: matchStart + replacement.length,
 			});
 
-			// Only link first occurrence per candidate
-			break;
+			linkedTerms.push(`${matchedText} → ${replacement}`);
+
+			// Adjust regex index to account for the replacement being longer than the original
+			regex.lastIndex = matchStart + replacement.length;
 		}
 	}
 
-	return result;
+	return { content: result, linkedTerms };
 }
