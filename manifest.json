@@ -1,0 +1,9 @@
+{
+	"id": "autolink",
+	"name": "AutoLink",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Automatically detects and inserts internal links to existing notes, reducing redundancy and manual effort.",
+	"author": "Jialing Cai",
+	"isDesktopOnly": false
+}
