@@ -1,10 +1,11 @@
 import { App, TFile } from "obsidian";
 import { AutoLinkSettings } from "./settings";
 
-interface NoteCandidate {
+export interface NoteCandidate {
 	title: string;
 	normalizedTitle: string;
 	pluralForms: string[];
+	translations: string[];
 }
 
 function escapeRegex(str: string): string {
@@ -92,6 +93,7 @@ export function getCandidateNotes(app: App, activeFile: TFile, settings: AutoLin
 			title,
 			normalizedTitle,
 			pluralForms: [],
+			translations: [],
 		};
 
 		if (settings.ignorePlurals) {
@@ -116,16 +118,43 @@ export interface InsertLinksResult {
 	linkedTerms: string[];
 }
 
+// CJK characters don't use word boundaries — detect if a form contains them
+const CJK_RANGE = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
+
+function buildPattern(forms: string[]): string {
+	// Group forms by whether they need word boundaries
+	const wordBoundaryForms: string[] = [];
+	const cjkForms: string[] = [];
+
+	for (const form of forms) {
+		if (CJK_RANGE.test(form)) {
+			cjkForms.push(escapeRegex(form));
+		} else {
+			wordBoundaryForms.push(escapeRegex(form));
+		}
+	}
+
+	const parts: string[] = [];
+	if (wordBoundaryForms.length > 0) {
+		parts.push(`\\b(?:${wordBoundaryForms.join("|")})\\b`);
+	}
+	if (cjkForms.length > 0) {
+		parts.push(`(?:${cjkForms.join("|")})`);
+	}
+	return parts.join("|");
+}
+
 export function insertLinks(content: string, candidates: NoteCandidate[], settings: AutoLinkSettings): InsertLinksResult {
 	let result = content;
 	const linkedRegions: Array<{ start: number; end: number }> = [];
 	const linkedTerms: string[] = [];
 
 	for (const candidate of candidates) {
-		const allForms = [candidate.title, ...candidate.pluralForms];
-		const pattern = allForms.map(escapeRegex).join("|");
+		const allForms = [candidate.title, ...candidate.pluralForms, ...candidate.translations];
+		const pattern = buildPattern(allForms);
+		if (!pattern) continue;
 		const flags = settings.caseSensitive ? "g" : "gi";
-		const regex = new RegExp(`\\b(${pattern})\\b`, flags);
+		const regex = new RegExp(pattern, flags);
 
 		let match;
 		while ((match = regex.exec(result)) !== null) {
