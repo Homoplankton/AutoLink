@@ -78,16 +78,12 @@ function isInsideProtectedRegion(content: string, matchStart: number, matchEnd: 
 }
 
 export function getCandidateNotes(app: App, activeFile: TFile, settings: AutoLinkSettings): NoteCandidate[] {
-	const folder = activeFile.parent;
-	if (!folder) return [];
-
 	const candidates: NoteCandidate[] = [];
 	const files = app.vault.getFiles();
 
 	for (const file of files) {
 		if (file.extension !== "md") continue;
 		if (file.path === activeFile.path) continue;
-		if (file.parent?.path !== folder.path) continue;
 
 		const title = file.basename;
 		const normalizedTitle = settings.caseSensitive ? title : title.toLowerCase();
